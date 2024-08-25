@@ -1,0 +1,125 @@
+validLicenses := ["iloverizzer"]
+InputBox, userPassword, nebula> Enter Your Key Below:
+isValid := false
+for _, license in validLicenses
+{
+if (userPassword = license)
+{
+isValid := true
+break
+}
+}
+if (!isValid)
+{
+MsgBox, Invalid license key! Exiting script.
+ExitApp
+}
+currentKeybind := ""
+hotkeyRef := ""
+currentColor := "FFFFFF"
+currentThreshold := 20
+currentSensitivity := 1.0
+currentPrediction := 0
+currentSmoothness := 1.0
+Gui, Font, s12, Bold
+Gui, Add, Text,, nebular triggerbot
+Gui, Font
+Gui, Add, Text,, Enter Delay (in milliseconds):
+Gui, Add, Edit, vDelayInput w250 h40, 0
+Gui, Add, Text,, Enter Keybind to Hold:
+Gui, Add, Edit, vKeybindInput w250 h40, t
+Gui, Add, Text,, Enter Hex Color Code:
+Gui, Add, Edit, vColorInput w250 h40, %currentColor%
+Gui, Add, Text,, Set Threshold:
+Gui, Add, Edit, vThresholdInput w250 h40, %currentThreshold%
+Gui, Add, Text,, Set Sensitivity (1.0 = default):
+Gui, Add, Edit, vSensitivityInput w250 h40, %currentSensitivity%
+Gui, Add, Text,, Set Prediction (0 = no prediction):
+Gui, Add, Edit, vPredictionInput w250 h40, %currentPrediction%
+Gui, Add, Text,, Set Smoothness (1.0 = default):
+Gui, Add, Edit, vSmoothnessInput w250 h40, %currentSmoothness%
+Gui, Add, Button, gStartScript w120 h40, Start
+Gui, Add, Button, gChangeKeybind w150 h40, Change Keybind
+Gui, Add, Button, gLoadConfig w120 h40, Load Config
+Gui, Show,, Click Script Settings
+Return
+StartScript:
+Gui, Submit, NoHide
+Delay := DelayInput
+Keybind := KeybindInput
+currentColor := ColorInput
+currentThreshold := ThresholdInput
+currentSensitivity := SensitivityInput
+currentPrediction := PredictionInput
+currentSmoothness := SmoothnessInput
+UpdateHotkey(Keybind)
+Gui, Hide
+Return
+ChangeKeybind:
+Gui, Submit, NoHide
+NewKeybind := KeybindInput
+UpdateHotkey(NewKeybind)
+Return
+LoadConfig:
+FileSelectFile, ConfigFile, 3,, Select a configuration file, Config Files (*.ini)
+if (ConfigFile = "")
+{
+MsgBox, No file selected.
+Return
+}
+IniRead, Delay, %ConfigFile%, Settings, Delay, 0
+IniRead, Keybind, %ConfigFile%, Settings, Keybind, t
+IniRead, currentColor, %ConfigFile%, Settings, Color, FFFFFF
+IniRead, currentThreshold, %ConfigFile%, Settings, Threshold, 20
+IniRead, currentSensitivity, %ConfigFile%, Settings, Sensitivity, 1.0
+IniRead, currentPrediction, %ConfigFile%, Settings, Prediction, 0
+IniRead, currentSmoothness, %ConfigFile%, Settings, Smoothness, 1.0
+GuiControl,, DelayInput, %Delay%
+GuiControl,, KeybindInput, %Keybind%
+GuiControl,, ColorInput, %currentColor%
+GuiControl,, ThresholdInput, %currentThreshold%
+GuiControl,, SensitivityInput, %currentSensitivity%
+GuiControl,, PredictionInput, %currentPrediction%
+GuiControl,, SmoothnessInput, %currentSmoothness%
+UpdateHotkey(Keybind)
+MsgBox, Config loaded successfully.
+Return
+UpdateHotkey(newKeybind)
+{
+global currentKeybind, hotkeyRef
+if (currentKeybind != "")
+{
+Hotkey, %currentKeybind%, Off
+}
+currentKeybind := newKeybind
+Hotkey, %currentKeybind%, StartClicking
+hotkeyRef := currentKeybind
+}
+StartClicking:
+global currentColor, currentThreshold, currentSensitivity, currentPrediction, currentSmoothness
+MouseGetPos, MouseX, MouseY
+PixelGetColor, Color1, MouseX+2, MouseY+2
+StringTrimLeft, Color1, Color1, 2
+Color1R := "0x" . SubStr(currentColor, 1, 2)
+Color1G := "0x" . SubStr(currentColor, 3, 2)
+Color1B := "0x" . SubStr(currentColor, 5, 2)
+while (GetKeyState(currentKeybind, "P"))
+{
+BlockInput, MouseMove
+MouseGetPos, MouseX, MouseY
+MouseX += currentPrediction * currentSensitivity
+MouseY += currentPrediction * currentSensitivity
+PixelGetColor, Color2, MouseX+2, MouseY+2
+StringTrimLeft, Color2, Color2, 2
+Color2R := "0x" . SubStr(Color2, 1, 2)
+Color2G := "0x" . SubStr(Color2, 3, 2)
+Color2B := "0x" . SubStr(Color2, 5, 2)
+if (Abs(Color1R - Color2R) > currentThreshold) or (Abs(Color1G - Color2G) > currentThreshold) or (Abs(Color1B - Color2B) > currentThreshold)
+{
+Sleep, % Delay / currentSmoothness
+Send, {LButton}
+}
+}
+BlockInput, MouseMoveOff
+Return
+End::
